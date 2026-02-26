@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Stage } from '@prisma/client'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
   const { stage, note } = await req.json()
 
   const outcome = await prisma.outcome.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       stage: stage as Stage,
       stageChangedAt: new Date(),
