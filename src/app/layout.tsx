@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sora, Inter, JetBrains_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const sora = Sora({
@@ -29,18 +30,24 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#040e17] text-[#e8f4f8]`}
-      >
-        {children}
-      </body>
-    </html>
+    <ClerkProvider
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+    >
+      <html lang="en" className="dark">
+        <body
+          className={`${sora.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased bg-[#040e17] text-[#e8f4f8]`}
+        >
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
