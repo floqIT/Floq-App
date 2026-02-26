@@ -1,38 +1,27 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --background: 215 50% 5%;
-    --foreground: 195 50% 95%;
-    --card: 215 40% 8%;
-    --card-foreground: 195 50% 95%;
-    --popover: 215 40% 8%;
-    --popover-foreground: 195 50% 95%;
-    --primary: 174 65% 51%;
-    --primary-foreground: 215 50% 5%;
-    --secondary: 215 30% 15%;
-    --secondary-foreground: 195 30% 80%;
-    --muted: 215 30% 12%;
-    --muted-foreground: 200 20% 55%;
-    --accent: 174 65% 51%;
-    --accent-foreground: 215 50% 5%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 200 20% 15%;
-    --input: 200 20% 15%;
-    --ring: 174 65% 51%;
-    --radius: 0.625rem;
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #040e17;
+  color: #e8f4f8;
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-    box-sizing: border-box;
-  }
-  body {
-    background-color: #040e17;
-    color: #e8f4f8;
-    font-family: var(--font-sora), var(--font-inter), system-ui, sans-serif;
-  }
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-sora), system-ui, sans-serif;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #061420; }
+::-webkit-scrollbar-thumb { background: rgba(45,212,191,0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(45,212,191,0.5); }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 6px 2px rgba(239,68,68,0.4); }
+  50% { box-shadow: 0 0 14px 5px rgba(239,68,68,0.7); }
+}
+
+.emergency-card {
+  animation: pulse-glow 2s ease-in-out infinite;
 }

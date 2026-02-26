@@ -1,28 +1,15 @@
-import { SignUp } from "@clerk/nextjs";
+import { SignUp } from '@clerk/nextjs'
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#040e17]">
-      <div className="flex flex-col items-center gap-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-[#e8f4f8]" style={{ fontFamily: "var(--font-sora)" }}>
-            <span style={{ color: "#2dd4bf" }}>FLOQ</span>
-          </h1>
-          <p className="text-[#a8ccd8] mt-1 text-sm">Create your account</p>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#040e17' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#2dd4bf', fontFamily: 'var(--font-sora)' }}>FLOQ</h1>
+          <p style={{ color: '#a8ccd8', marginTop: '0.25rem', fontSize: '0.875rem' }}>Create your account</p>
         </div>
-        <SignUp
-          appearance={{
-            variables: {
-              colorPrimary: "#2dd4bf",
-              colorBackground: "#061420",
-              colorText: "#e8f4f8",
-              colorInputBackground: "#0a1e2e",
-              colorInputText: "#e8f4f8",
-              borderRadius: "0.625rem",
-            },
-          }}
-        />
+        <SignUp appearance={{ variables: { colorPrimary: '#2dd4bf', colorBackground: '#061420', colorText: '#e8f4f8', colorInputBackground: '#0a1e2e', colorInputText: '#e8f4f8', borderRadius: '0.5rem' } }} />
       </div>
     </div>
-  );
+  )
 }
