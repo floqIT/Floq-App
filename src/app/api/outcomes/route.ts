@@ -13,6 +13,8 @@ const CreateOutcomeSchema = z.object({
   targetMetric: z.string().max(500).optional(),
   description: z.string().optional(),
   currentId: z.string().cuid().optional(),
+  projectId: z.string().cuid().optional(),
+  assigneeId: z.string().optional(),
 })
 
 export async function GET(req: NextRequest) {
@@ -23,14 +25,20 @@ export async function GET(req: NextRequest) {
     const workspaceId = req.nextUrl.searchParams.get('workspaceId')
     if (!workspaceId) return NextResponse.json({ error: 'workspaceId required' }, { status: 400 })
 
+    const projectId = req.nextUrl.searchParams.get('projectId')
+
     // Verify user is member of this workspace
     const member = await prisma.member.findFirst({ where: { clerkUserId: userId, workspaceId } })
     if (!member) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const outcomes = await prisma.outcome.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        ...(projectId ? { projectId } : {}),
+      },
       include: {
         current: true,
+        project: { select: { id: true, name: true, color: true } },
         assignee: { select: { id: true, name: true, avatarUrl: true } },
         _count: { select: { signals: true, comments: true } },
       },
@@ -65,7 +73,12 @@ export async function POST(req: NextRequest) {
         createdById: member.id,
         stageHistory: { create: { toStage: data.stage ?? 'IDEATE' } },
       },
-      include: { current: true, assignee: true, _count: { select: { signals: true, comments: true } } },
+      include: {
+        current: true,
+        project: { select: { id: true, name: true, color: true } },
+        assignee: { select: { id: true, name: true, avatarUrl: true } },
+        _count: { select: { signals: true, comments: true } },
+      },
     })
 
     return NextResponse.json(outcome, { status: 201 })
