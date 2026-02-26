@@ -54,6 +54,7 @@ model Project {
   currents       Current[]
   outcomes       Outcome[]
   projectMembers ProjectMember[]
+  focusWindows   FocusWindow[]
 }
 
 enum ProjectStatus {
@@ -251,12 +252,14 @@ model FocusWindow {
   id          String   @id @default(cuid())
   name        String
   workspaceId String
+  projectId   String?
   startDate   DateTime @default(now())
   endDate     DateTime
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   workspace     Workspace      @relation(fields: [workspaceId], references: [id])
+  project       Project?       @relation(fields: [projectId], references: [id])
   focusOutcomes FocusOutcome[]
 }
 

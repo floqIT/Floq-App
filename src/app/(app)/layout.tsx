@@ -5,26 +5,14 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { UserButton, useUser } from '@clerk/nextjs'
 import {
-  LayoutDashboard,
   FolderOpen,
-  Kanban,
-  List,
-  Timer,
-  Users,
-  BarChart2,
   Settings,
   Menu,
   X,
 } from 'lucide-react'
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { href: '/projects', label: 'Projects', Icon: FolderOpen },
-  { href: '/board', label: 'Board', Icon: Kanban },
-  { href: '/outcomes', label: 'Outcomes', Icon: List },
-  { href: '/windows', label: 'Focus Windows', Icon: Timer },
-  { href: '/members', label: 'Members', Icon: Users },
-  { href: '/metrics', label: 'Metrics', Icon: BarChart2 },
   { href: '/settings', label: 'Settings', Icon: Settings },
 ]
 

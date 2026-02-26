@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db'
 const CreateWindowSchema = z.object({
   name: z.string().min(1).max(100),
   workspaceId: z.string(),
+  projectId: z.string().optional(),
   startDate: z.string().datetime(),
   endDate: z.string().datetime(),
   isActive: z.boolean().default(true),
@@ -19,11 +20,16 @@ export async function GET(req: NextRequest) {
     const workspaceId = req.nextUrl.searchParams.get('workspaceId')
     if (!workspaceId) return NextResponse.json({ error: 'workspaceId required' }, { status: 400 })
 
+    const projectId = req.nextUrl.searchParams.get('projectId')
+
     const member = await prisma.member.findFirst({ where: { clerkUserId: userId, workspaceId } })
     if (!member) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const windows = await prisma.focusWindow.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        ...(projectId ? { projectId } : {}),
+      },
       include: {
         focusOutcomes: {
           include: {
@@ -65,6 +71,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: parsed.data.name,
         workspaceId: parsed.data.workspaceId,
+        ...(parsed.data.projectId ? { projectId: parsed.data.projectId } : {}),
         startDate: new Date(parsed.data.startDate),
         endDate: new Date(parsed.data.endDate),
         isActive: parsed.data.isActive,
