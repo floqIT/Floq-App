@@ -55,6 +55,22 @@ model Project {
   outcomes       Outcome[]
   projectMembers ProjectMember[]
   focusWindows   FocusWindow[]
+  invites        ProjectInvite[]
+}
+
+// ─── PROJECT INVITE ────────────────────────────────────────────────────────────
+model ProjectInvite {
+  id          String      @id @default(cuid())
+  projectId   String
+  email       String
+  role        ProjectRole @default(CONTRIBUTOR)
+  token       String      @unique @default(cuid())
+  invitedById String
+  acceptedAt  DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 enum ProjectStatus {

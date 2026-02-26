@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/health',
+  '/invite(.*)',
+  '/api/invites/(.*)',
 ])
 
 // Old global routes that are now deprecated — redirect to /projects
