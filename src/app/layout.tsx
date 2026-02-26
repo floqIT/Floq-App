@@ -8,13 +8,21 @@ const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
 const mono = JetBrains_Mono({ variable: '--font-mono', subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'FLOQ Board',
-  description: 'Outcome Flow Board — post-Agile framework',
+  title: 'FLOQ — Flow. Launch. Observe. Quantify.',
+  description: 'Outcome Flow Board — the post-Agile framework for outcome-driven teams.',
 }
+
+export const dynamic = 'force-dynamic'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/board"
+      afterSignUpUrl="/board"
+    >
       <html lang="en">
         <body className={`${sora.variable} ${inter.variable} ${mono.variable}`}>
           {children}
