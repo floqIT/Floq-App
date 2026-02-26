@@ -58,7 +58,7 @@ export default async function DashboardPage() {
   const emergency = outcomes.filter(o => o.signalStatus === 'EMERGENCY').length
 
   const stageCounts = Object.fromEntries(
-    ['IDEATE', 'IDENTIFY', 'SHAPE', 'BUILD', 'SHIP', 'MEASURE', 'DELIVER', 'PIVOT'].map(s => [s, outcomes.filter(o => o.stage === s).length])
+    ['IDEATE', 'IDENTIFY', 'SHAPE', 'BUILD', 'QA', 'SHIP', 'MEASURE', 'DELIVER', 'PIVOT'].map(s => [s, outcomes.filter(o => o.stage === s).length])
   ) as Record<Stage, number>
 
   const recent = outcomes.slice(0, 5)

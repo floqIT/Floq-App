@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type Stage = 'IDEATE' | 'IDENTIFY' | 'SHAPE' | 'BUILD' | 'SHIP' | 'MEASURE' | 'DELIVER' | 'PIVOT'
+export type Stage = 'IDEATE' | 'IDENTIFY' | 'SHAPE' | 'BUILD' | 'QA' | 'SHIP' | 'MEASURE' | 'DELIVER' | 'PIVOT'
 export type SignalStatus = 'NORMAL' | 'AT_RISK' | 'EMERGENCY' | 'DELIVERED'
 
 export interface Outcome {

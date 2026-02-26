@@ -17,7 +17,7 @@ export default async function MetricsPage() {
   })
 
   const total = outcomes.length
-  const stageCounts: Record<Stage, number> = { IDEATE: 0, IDENTIFY: 0, SHAPE: 0, BUILD: 0, SHIP: 0, MEASURE: 0, DELIVER: 0, PIVOT: 0 }
+  const stageCounts: Record<Stage, number> = { IDEATE: 0, IDENTIFY: 0, SHAPE: 0, BUILD: 0, QA: 0, SHIP: 0, MEASURE: 0, DELIVER: 0, PIVOT: 0 }
   const signalCounts: Record<SignalStatus, number> = { NORMAL: 0, AT_RISK: 0, EMERGENCY: 0, DELIVERED: 0 }
 
   for (const o of outcomes) {
@@ -39,7 +39,7 @@ export default async function MetricsPage() {
   const top5 = [...outcomes].sort((a, b) => b.impactScore - a.impactScore || b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5)
 
   const maxStageCount = Math.max(...Object.values(stageCounts), 1)
-  const stages: Stage[] = ['IDEATE', 'IDENTIFY', 'SHAPE', 'BUILD', 'SHIP', 'MEASURE', 'DELIVER', 'PIVOT']
+  const stages: Stage[] = ['IDEATE', 'IDENTIFY', 'SHAPE', 'BUILD', 'QA', 'SHIP', 'MEASURE', 'DELIVER', 'PIVOT']
   const signalList: { key: SignalStatus; label: string; color: string }[] = [
     { key: 'NORMAL', label: 'Normal', color: SIGNAL_COLORS.NORMAL },
     { key: 'AT_RISK', label: 'At Risk', color: SIGNAL_COLORS.AT_RISK },

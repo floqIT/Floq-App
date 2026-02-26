@@ -115,6 +115,7 @@ model Member {
   workspace          Workspace       @relation(fields: [workspaceId], references: [id])
   outcomes           Outcome[]       @relation("AssignedOutcomes")
   createdOutcomes    Outcome[]       @relation("CreatedOutcomes")
+  qaOutcomes         Outcome[]       @relation("QAOutcomes")
   projectMemberships ProjectMember[]
 
   @@unique([clerkUserId, workspaceId])
@@ -168,6 +169,9 @@ model Outcome {
   stageChangedAt DateTime @default(now())
   deliveredAt    DateTime?
 
+  qaAssigneeId  String?
+  qaAssignee    Member?        @relation("QAOutcomes", fields: [qaAssigneeId], references: [id])
+
   workspace     Workspace      @relation(fields: [workspaceId], references: [id])
   project       Project?       @relation(fields: [projectId], references: [id])
   current       Current?       @relation(fields: [currentId], references: [id])
@@ -185,6 +189,7 @@ enum Stage {
   IDENTIFY
   SHAPE
   BUILD
+  QA
   SHIP
   MEASURE
   DELIVER

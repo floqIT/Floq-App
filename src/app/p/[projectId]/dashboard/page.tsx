@@ -64,7 +64,7 @@ export default async function ProjectDashboardPage({
 
   // Stage counts
   const stageCounts: Record<Stage, number> = {
-    IDEATE: 0, IDENTIFY: 0, SHAPE: 0, BUILD: 0, SHIP: 0, MEASURE: 0, DELIVER: 0, PIVOT: 0,
+    IDEATE: 0, IDENTIFY: 0, SHAPE: 0, BUILD: 0, QA: 0, SHIP: 0, MEASURE: 0, DELIVER: 0, PIVOT: 0,
   }
   for (const o of outcomes) stageCounts[o.stage as Stage]++
   const maxStageCount = Math.max(...Object.values(stageCounts), 1)

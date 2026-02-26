@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db'
 import { Stage } from '@prisma/client'
 
 const PatchStageSchema = z.object({
-  stage: z.enum(['IDEATE','IDENTIFY','SHAPE','BUILD','SHIP','MEASURE','DELIVER','PIVOT']),
+  stage: z.enum(['IDEATE','IDENTIFY','SHAPE','BUILD','QA','SHIP','MEASURE','DELIVER','PIVOT']),
   note: z.string().max(500).optional(),
 })
 
@@ -33,13 +33,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         deliveredAt: parsed.data.stage === 'DELIVER' ? new Date() : undefined,
         stageHistory: {
           create: {
+            fromStage: outcome.stage as Stage,
             toStage: parsed.data.stage as Stage,
             note: parsed.data.note,
             changedById: member.id,
           },
         },
       },
-      include: { current: true, assignee: true, _count: { select: { signals: true, comments: true } } },
+      include: {
+        current: true,
+        assignee: { select: { id: true, name: true, avatarUrl: true } },
+        qaAssignee: { select: { id: true, name: true, avatarUrl: true } },
+        _count: { select: { signals: true, comments: true } },
+      },
     })
 
     return NextResponse.json(updated)

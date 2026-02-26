@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db'
 const CreateOutcomeSchema = z.object({
   title: z.string().min(1).max(200),
   workspaceId: z.string().cuid(),
-  stage: z.enum(['IDEATE','IDENTIFY','SHAPE','BUILD','SHIP','MEASURE','DELIVER','PIVOT']).default('IDEATE'),
+  stage: z.enum(['IDEATE','IDENTIFY','SHAPE','BUILD','QA','SHIP','MEASURE','DELIVER','PIVOT']).default('IDEATE'),
   signalStatus: z.enum(['NORMAL','AT_RISK','EMERGENCY','DELIVERED']).default('NORMAL'),
   impactScore: z.number().int().min(1).max(5).default(3),
   isAiPair: z.boolean().default(false),
@@ -40,11 +40,11 @@ export async function GET(req: NextRequest) {
         current: true,
         project: { select: { id: true, name: true, color: true } },
         assignee: { select: { id: true, name: true, avatarUrl: true } },
+        qaAssignee: { select: { id: true, name: true, avatarUrl: true } },
         _count: { select: { signals: true, comments: true } },
       },
       orderBy: [{ signalStatus: 'desc' }, { impactScore: 'desc' }, { createdAt: 'desc' }],
     })
-
     return NextResponse.json(outcomes)
   } catch (e) {
     console.error('[outcomes GET]', e)
@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
         current: true,
         project: { select: { id: true, name: true, color: true } },
         assignee: { select: { id: true, name: true, avatarUrl: true } },
+        qaAssignee: { select: { id: true, name: true, avatarUrl: true } },
         _count: { select: { signals: true, comments: true } },
       },
     })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import useSWR from 'swr'
 import { Pencil, Check, X as XIcon, Trash2, GitPullRequest, GitBranch, GitCommit, Package, FileCode, Plus, ExternalLink } from 'lucide-react'
@@ -44,14 +44,21 @@ function ImpactDots({ score, interactive, onChange }: { score: number; interacti
   )
 }
 
-function OutcomeCard({ outcome, onClick, onAdvance }: { outcome: OutcomeWithExtras; onClick: () => void; onAdvance: () => void }) {
+function OutcomeCard({ outcome, onClick, onAdvance, onRedefine }: {
+  outcome: OutcomeWithExtras; onClick: () => void; onAdvance: () => void; onRedefine?: () => void
+}) {
   const isEmergency = outcome.signalStatus === 'EMERGENCY'
-  const stageIdx = STAGES.indexOf(outcome.stage)
-  const canAdvance = stageIdx < STAGES.length - 1
+  const isPivot = outcome.stage === 'PIVOT'
+  const canAdvance = NEXT_STAGE[outcome.stage] !== undefined
   return (
-    <div onClick={onClick} style={{ background: '#061c2e', border: `1px solid ${isEmergency ? 'rgba(239,68,68,0.5)' : 'rgba(45,212,191,0.1)'}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'border-color 0.2s', userSelect: 'none' }}
+    <div onClick={onClick} style={{ background: '#061c2e', border: `1px solid ${isEmergency ? 'rgba(239,68,68,0.5)' : isPivot ? 'rgba(239,68,68,0.3)' : 'rgba(45,212,191,0.1)'}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'border-color 0.2s', userSelect: 'none' }}
       onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = STAGE_COLORS[outcome.stage] + '66' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = isEmergency ? 'rgba(239,68,68,0.5)' : 'rgba(45,212,191,0.1)' }}>
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = isEmergency ? 'rgba(239,68,68,0.5)' : isPivot ? 'rgba(239,68,68,0.3)' : 'rgba(45,212,191,0.1)' }}>
+      {isPivot && (
+        <div style={{ fontSize: 10, fontWeight: 800, color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 4, padding: '2px 8px', marginBottom: 8, display: 'inline-block', letterSpacing: '0.08em' }}>
+          🔄 PIVOTING
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: '#e8f4f8', lineHeight: 1.3, flex: 1, marginRight: 8 }}>{outcome.title}</span>
         <span title={outcome.signalStatus} style={{ fontSize: 14, flexShrink: 0 }}>{SIGNAL_EMOJI[outcome.signalStatus]}</span>
@@ -61,12 +68,36 @@ function OutcomeCard({ outcome, onClick, onAdvance }: { outcome: OutcomeWithExtr
         {outcome.isAiPair && <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.2)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 4, padding: '1px 6px', letterSpacing: '0.05em' }}>⚡ AI</span>}
         {outcome.codeLinks && outcome.codeLinks.length > 0 && <span style={{ fontSize: 10, color: '#6b8fa8' }}>🔗 {outcome.codeLinks.length}</span>}
       </div>
+      {outcome.stage === 'QA' && outcome.qaAssignee && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <span style={{ fontSize: 10, color: '#06b6d4', fontWeight: 600 }}>🧪 QA:</span>
+          {outcome.qaAssignee.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={outcome.qaAssignee.avatarUrl} alt={outcome.qaAssignee.name} style={{ width: 18, height: 18, borderRadius: '50%' }} />
+          ) : (
+            <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(6,182,212,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#06b6d4', fontWeight: 700 }}>
+              {outcome.qaAssignee.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span style={{ fontSize: 11, color: '#06b6d4' }}>{outcome.qaAssignee.name}</span>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 10, fontWeight: 700, background: STAGE_COLORS[outcome.stage] + '22', color: STAGE_COLORS[outcome.stage], border: `1px solid ${STAGE_COLORS[outcome.stage]}44`, borderRadius: 4, padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{outcome.stage}</span>
-        {canAdvance && (
-          <button onClick={e => { e.stopPropagation(); onAdvance() }} style={{ fontSize: 14, background: 'rgba(45,212,191,0.1)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(45,212,191,0.25)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(45,212,191,0.1)' }}>→</button>
+        {isPivot ? (
+          <button onClick={e => { e.stopPropagation(); onRedefine?.() }} style={{ fontSize: 12, fontWeight: 700, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.2)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.1)' }}>
+            ↩ Redefine → SHAPE
+          </button>
+        ) : (
+          <>
+            <span style={{ fontSize: 10, fontWeight: 700, background: STAGE_COLORS[outcome.stage] + '22', color: STAGE_COLORS[outcome.stage], border: `1px solid ${STAGE_COLORS[outcome.stage]}44`, borderRadius: 4, padding: '2px 7px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{outcome.stage}</span>
+            {canAdvance && (
+              <button onClick={e => { e.stopPropagation(); onAdvance() }} style={{ fontSize: 14, background: 'rgba(45,212,191,0.1)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(45,212,191,0.25)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(45,212,191,0.1)' }}>→</button>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -144,15 +175,46 @@ function CodeLinksSection({ outcome, onUpdate }: { outcome: OutcomeWithExtras; o
   )
 }
 
-function DetailPanel({ outcome, onClose, onAdvance, onRetreat, onUpdate, onDelete }: {
+function PivotDecisionModal({ onClose, onConfirm }: { onClose: () => void; onConfirm: (note: string) => Promise<void> }) {
+  const [note, setNote] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  async function confirm() {
+    setConfirming(true)
+    try { await onConfirm(note) } finally { setConfirming(false) }
+  }
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,14,23,0.92)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: '#061c2e', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 14, padding: '28px', width: 420, maxWidth: '95vw' }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#e8f4f8', marginBottom: 10 }}>🔄 Pivot Decision</h3>
+        <p style={{ fontSize: 13, color: '#a8ccd8', lineHeight: 1.7, marginBottom: 18 }}>
+          This outcome didn&apos;t meet its target.<br />
+          Pivot sends it back to <strong style={{ color: '#ec4899' }}>SHAPE</strong> with new learnings to redefine the approach.
+        </p>
+        <label style={{ fontSize: 11, fontWeight: 600, color: '#6b8fa8', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 8 }}>Pivot Note (optional)</label>
+        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="What didn't work / new direction..."
+          style={{ background: '#040e17', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', color: '#e8f4f8', fontSize: 13, width: '100%', minHeight: 80, resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '9px 0', background: 'transparent', color: '#6b8fa8', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={confirm} disabled={confirming} style={{ flex: 2, padding: '9px 0', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            {confirming ? 'Pivoting…' : '🔄 Confirm Pivot'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DetailPanel({ outcome, onClose, onAdvance, onRetreat, onUpdate, onDelete, onPivotDecision, onRedefine }: {
   outcome: OutcomeWithExtras; onClose: () => void; onAdvance: () => void; onRetreat: () => void
   onUpdate: (updated: OutcomeWithExtras) => void; onDelete: () => void
+  onPivotDecision: (note: string) => Promise<void>; onRedefine: () => void
 }) {
   const stageIdx = STAGES.indexOf(outcome.stage)
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showPivotModal, setShowPivotModal] = useState(false)
   const [editTitle, setEditTitle] = useState(outcome.title)
   const [editSignal, setEditSignal] = useState<SignalStatus>(outcome.signalStatus)
   const [editImpact, setEditImpact] = useState(outcome.impactScore)
@@ -183,122 +245,180 @@ function DetailPanel({ outcome, onClose, onAdvance, onRetreat, onUpdate, onDelet
 
   const inputSt: React.CSSProperties = { background: '#040e17', border: '1px solid rgba(45,212,191,0.25)', borderRadius: 8, padding: '8px 12px', color: '#e8f4f8', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }
   const labelSt: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#6b8fa8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8, display: 'block' }
+  const isPivot = outcome.stage === 'PIVOT'
+  const isMeasure = outcome.stage === 'MEASURE'
 
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 400, background: '#061c2e', borderLeft: '1px solid rgba(45,212,191,0.2)', zIndex: 300, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.5)' }}>
-      <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(45,212,191,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
-        <div style={{ flex: 1, marginRight: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: STAGE_COLORS[outcome.stage], textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{outcome.stage}</div>
-          {isEditing ? <input style={inputSt} value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus /> : <h2 style={{ fontSize: 17, fontWeight: 700, color: '#e8f4f8', lineHeight: 1.3 }}>{outcome.title}</h2>}
-        </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          {isEditing ? (
-            <>
-              <button onClick={saveEdit} disabled={saving} style={{ background: 'rgba(45,212,191,0.15)', border: '1px solid rgba(45,212,191,0.4)', borderRadius: 7, color: '#2dd4bf', padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><Check size={13} /> {saving ? '…' : 'Save'}</button>
-              <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 7, color: '#6b8fa8', padding: '5px 8px', cursor: 'pointer' }}><XIcon size={13} /></button>
-            </>
-          ) : (
-            <>
-              <button onClick={startEdit} style={{ background: 'none', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 7, color: '#6b8fa8', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#2dd4bf' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6b8fa8' }}><Pencil size={13} /></button>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#a8ccd8', fontSize: 20, cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
-            </>
-          )}
-        </div>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-        <div style={{ marginBottom: 20 }}>
-          <span style={labelSt}>Signal Status</span>
-          {isEditing ? (
-            <div style={{ display: 'flex', gap: 6 }}>
-              {(['NORMAL','AT_RISK','EMERGENCY'] as SignalStatus[]).map(s => (
-                <button key={s} onClick={() => setEditSignal(s)} style={{ flex: 1, padding: '7px 4px', borderRadius: 7, border: `1px solid ${editSignal===s?SIGNAL_COLORS[s]:'rgba(45,212,191,0.15)'}`, background: editSignal===s?SIGNAL_COLORS[s]+'22':'transparent', color: editSignal===s?SIGNAL_COLORS[s]:'#6b8fa8', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>{s==='NORMAL'?'🟢':s==='AT_RISK'?'🟡':'🔴'} {s}</button>
-              ))}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: SIGNAL_COLORS[outcome.signalStatus], display: 'inline-block' }} />
-              <span style={{ fontWeight: 600, color: SIGNAL_COLORS[outcome.signalStatus] }}>{outcome.signalStatus}</span>
-            </div>
-          )}
-        </div>
-        <div style={{ marginBottom: 20 }}>
-          <span style={labelSt}>Impact Score</span>
-          {isEditing ? <ImpactDots score={editImpact} interactive onChange={setEditImpact} /> : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ImpactDots score={outcome.impactScore} /><span style={{ fontSize: 13, color: '#a8ccd8' }}>{outcome.impactScore} / 5</span></div>
-          )}
-        </div>
-        <div style={{ marginBottom: 20 }}>
-          <span style={labelSt}>AI Pair</span>
-          {isEditing ? (
-            <button onClick={() => setEditAiPair(p => !p)} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${editAiPair?'rgba(99,102,241,0.5)':'rgba(45,212,191,0.15)'}`, background: editAiPair?'rgba(99,102,241,0.2)':'transparent', color: editAiPair?'#818cf8':'#6b8fa8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{editAiPair ? '⚡ Enabled' : 'Disabled'}</button>
-          ) : (
-            <span style={{ fontSize: 12, fontWeight: 700, background: outcome.isAiPair?'rgba(99,102,241,0.2)':'rgba(100,100,100,0.15)', color: outcome.isAiPair?'#818cf8':'#6b8fa8', border: `1px solid ${outcome.isAiPair?'rgba(99,102,241,0.4)':'rgba(100,100,100,0.3)'}`, borderRadius: 5, padding: '3px 10px' }}>{outcome.isAiPair?'⚡ Active':'Disabled'}</span>
-          )}
-        </div>
-        <div style={{ marginBottom: 20 }}>
-          <span style={labelSt}>Target Metric</span>
-          {isEditing ? (
-            <textarea style={{ ...inputSt, minHeight: 80, resize: 'vertical' }} value={editMetric} onChange={e => setEditMetric(e.target.value)} placeholder="e.g. 1000 active users / month" />
-          ) : outcome.targetMetric ? (
-            <p style={{ fontSize: 13, color: '#a8ccd8', lineHeight: 1.5 }}>{outcome.targetMetric}</p>
-          ) : <span style={{ fontSize: 12, color: '#3a5a6e', fontStyle: 'italic' }}>Not set</span>}
-        </div>
-        <div style={{ marginBottom: 20 }}>
-          <span style={labelSt}>Description</span>
-          {isEditing ? (
-            <RichTextEditor content={editDescription} onChange={setEditDescription} editable minHeight={80} placeholder="Add a description…" />
-          ) : outcome.description ? (
-            <div className="tiptap-editor" style={{ fontSize: 13, color: '#a8ccd8', lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: outcome.description }} />
-          ) : <span style={{ fontSize: 12, color: '#3a5a6e', fontStyle: 'italic' }}>No description</span>}
-        </div>
-        {outcome.assignee && (
-          <div style={{ marginBottom: 20 }}>
-            <span style={labelSt}>Assignee</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {outcome.assignee.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={outcome.assignee.avatarUrl} alt={outcome.assignee.name} style={{ width: 28, height: 28, borderRadius: '50%' }} />
-              ) : (
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(45,212,191,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#2dd4bf', fontWeight: 700 }}>{outcome.assignee.name.charAt(0).toUpperCase()}</div>
-              )}
-              <span style={{ fontSize: 13, color: '#a8ccd8' }}>{outcome.assignee.name}</span>
-            </div>
+    <>
+      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 400, background: '#061c2e', borderLeft: '1px solid rgba(45,212,191,0.2)', zIndex: 300, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.5)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(45,212,191,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+          <div style={{ flex: 1, marginRight: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: STAGE_COLORS[outcome.stage], textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{outcome.stage}</div>
+            {isEditing ? <input style={inputSt} value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus /> : <h2 style={{ fontSize: 17, fontWeight: 700, color: '#e8f4f8', lineHeight: 1.3 }}>{outcome.title}</h2>}
           </div>
-        )}
-        {outcome._count && (
-          <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
-            <div style={{ fontSize: 12, color: '#6b8fa8' }}><span style={{ fontWeight: 700, color: '#a8ccd8' }}>{outcome._count.signals}</span> signals</div>
-            <div style={{ fontSize: 12, color: '#6b8fa8' }}><span style={{ fontWeight: 700, color: '#a8ccd8' }}>{outcome._count.comments}</span> comments</div>
-          </div>
-        )}
-        <CodeLinksSection outcome={outcome} onUpdate={links => onUpdate({ ...outcome, codeLinks: links })} />
-        {!isEditing && (
-          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(239,68,68,0.15)' }}>
-            {confirmDelete ? (
-              <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 14px' }}>
-                <p style={{ fontSize: 13, color: '#f87171', marginBottom: 10 }}>Delete this outcome? This cannot be undone.</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '7px 0', background: 'transparent', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 7, color: '#6b8fa8', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={handleDelete} disabled={deleting} style={{ flex: 2, padding: '7px 0', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 7, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{deleting ? 'Deleting…' : 'Yes, Delete'}</button>
-                </div>
-              </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+            {isEditing ? (
+              <>
+                <button onClick={saveEdit} disabled={saving} style={{ background: 'rgba(45,212,191,0.15)', border: '1px solid rgba(45,212,191,0.4)', borderRadius: 7, color: '#2dd4bf', padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><Check size={13} /> {saving ? '…' : 'Save'}</button>
+                <button onClick={() => setIsEditing(false)} style={{ background: 'none', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 7, color: '#6b8fa8', padding: '5px 8px', cursor: 'pointer' }}><XIcon size={13} /></button>
+              </>
             ) : (
-              <button onClick={() => setConfirmDelete(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, color: '#6b8fa8', padding: '7px 12px', fontSize: 12, cursor: 'pointer' }}
-                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color='#ef4444'; b.style.borderColor='rgba(239,68,68,0.4)' }}
-                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color='#6b8fa8'; b.style.borderColor='rgba(239,68,68,0.2)' }}>
-                <Trash2 size={13} /> Delete Outcome
-              </button>
+              <>
+                <button onClick={startEdit} style={{ background: 'none', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 7, color: '#6b8fa8', padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#2dd4bf' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6b8fa8' }}><Pencil size={13} /></button>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#a8ccd8', fontSize: 20, cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
+              </>
             )}
           </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          <div style={{ marginBottom: 20 }}>
+            <span style={labelSt}>Signal Status</span>
+            {isEditing ? (
+              <div style={{ display: 'flex', gap: 6 }}>
+                {(['NORMAL','AT_RISK','EMERGENCY'] as SignalStatus[]).map(s => (
+                  <button key={s} onClick={() => setEditSignal(s)} style={{ flex: 1, padding: '7px 4px', borderRadius: 7, border: `1px solid ${editSignal===s?SIGNAL_COLORS[s]:'rgba(45,212,191,0.15)'}`, background: editSignal===s?SIGNAL_COLORS[s]+'22':'transparent', color: editSignal===s?SIGNAL_COLORS[s]:'#6b8fa8', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>{s==='NORMAL'?'🟢':s==='AT_RISK'?'🟡':'🔴'} {s}</button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: SIGNAL_COLORS[outcome.signalStatus], display: 'inline-block' }} />
+                <span style={{ fontWeight: 600, color: SIGNAL_COLORS[outcome.signalStatus] }}>{outcome.signalStatus}</span>
+              </div>
+            )}
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <span style={labelSt}>Impact Score</span>
+            {isEditing ? <ImpactDots score={editImpact} interactive onChange={setEditImpact} /> : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ImpactDots score={outcome.impactScore} /><span style={{ fontSize: 13, color: '#a8ccd8' }}>{outcome.impactScore} / 5</span></div>
+            )}
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <span style={labelSt}>AI Pair</span>
+            {isEditing ? (
+              <button onClick={() => setEditAiPair(p => !p)} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${editAiPair?'rgba(99,102,241,0.5)':'rgba(45,212,191,0.15)'}`, background: editAiPair?'rgba(99,102,241,0.2)':'transparent', color: editAiPair?'#818cf8':'#6b8fa8', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{editAiPair ? '⚡ Enabled' : 'Disabled'}</button>
+            ) : (
+              <span style={{ fontSize: 12, fontWeight: 700, background: outcome.isAiPair?'rgba(99,102,241,0.2)':'rgba(100,100,100,0.15)', color: outcome.isAiPair?'#818cf8':'#6b8fa8', border: `1px solid ${outcome.isAiPair?'rgba(99,102,241,0.4)':'rgba(100,100,100,0.3)'}`, borderRadius: 5, padding: '3px 10px' }}>{outcome.isAiPair?'⚡ Active':'Disabled'}</span>
+            )}
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <span style={labelSt}>Target Metric</span>
+            {isEditing ? (
+              <textarea style={{ ...inputSt, minHeight: 80, resize: 'vertical' }} value={editMetric} onChange={e => setEditMetric(e.target.value)} placeholder="e.g. 1000 active users / month" />
+            ) : outcome.targetMetric ? (
+              <p style={{ fontSize: 13, color: '#a8ccd8', lineHeight: 1.5 }}>{outcome.targetMetric}</p>
+            ) : <span style={{ fontSize: 12, color: '#3a5a6e', fontStyle: 'italic' }}>Not set</span>}
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <span style={labelSt}>Description</span>
+            {isEditing ? (
+              <RichTextEditor content={editDescription} onChange={setEditDescription} editable minHeight={80} placeholder="Add a description…" />
+            ) : outcome.description ? (
+              <div className="tiptap-editor" style={{ fontSize: 13, color: '#a8ccd8', lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: outcome.description }} />
+            ) : <span style={{ fontSize: 12, color: '#3a5a6e', fontStyle: 'italic' }}>No description</span>}
+          </div>
+          {outcome.assignee && (
+            <div style={{ marginBottom: 20 }}>
+              <span style={labelSt}>Assignee</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {outcome.assignee.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={outcome.assignee.avatarUrl} alt={outcome.assignee.name} style={{ width: 28, height: 28, borderRadius: '50%' }} />
+                ) : (
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(45,212,191,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#2dd4bf', fontWeight: 700 }}>{outcome.assignee.name.charAt(0).toUpperCase()}</div>
+                )}
+                <span style={{ fontSize: 13, color: '#a8ccd8' }}>{outcome.assignee.name}</span>
+              </div>
+            </div>
+          )}
+          {/* QA Assignee */}
+          <div style={{ marginBottom: 20 }}>
+            <span style={labelSt}>QA Assignee</span>
+            {outcome.qaAssignee ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {outcome.qaAssignee.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={outcome.qaAssignee.avatarUrl} alt={outcome.qaAssignee.name} style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid rgba(6,182,212,0.4)' }} />
+                ) : (
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(6,182,212,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#06b6d4', fontWeight: 700 }}>
+                    {outcome.qaAssignee.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span style={{ fontSize: 13, color: '#a8ccd8' }}>{outcome.qaAssignee.name}</span>
+              </div>
+            ) : (
+              <span style={{ fontSize: 12, color: '#3a5a6e', fontStyle: 'italic' }}>— Unassigned</span>
+            )}
+          </div>
+          {outcome._count && (
+            <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+              <div style={{ fontSize: 12, color: '#6b8fa8' }}><span style={{ fontWeight: 700, color: '#a8ccd8' }}>{outcome._count.signals}</span> signals</div>
+              <div style={{ fontSize: 12, color: '#6b8fa8' }}><span style={{ fontWeight: 700, color: '#a8ccd8' }}>{outcome._count.comments}</span> comments</div>
+            </div>
+          )}
+          <div style={{ marginBottom: 0 }}>
+            <span style={labelSt}>Stage Timeline</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {STAGES.slice(0, STAGES.indexOf(outcome.stage) + 1).map((s, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: s === outcome.stage ? STAGE_COLORS[s] : STAGE_COLORS[s] + '66', flexShrink: 0, display: 'inline-block' }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: s === outcome.stage ? STAGE_COLORS[s] : STAGE_COLORS[s] + 'aa', width: 80 }}>{s}</span>
+                  {s === outcome.stage && outcome.stageChangedAt && (
+                    <span style={{ fontSize: 11, color: '#6b8fa8' }}>{new Date(outcome.stageChangedAt).toLocaleDateString()}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <CodeLinksSection outcome={outcome} onUpdate={links => onUpdate({ ...outcome, codeLinks: links })} />
+          {!isEditing && (
+            <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid rgba(239,68,68,0.15)' }}>
+              {confirmDelete ? (
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '12px 14px' }}>
+                  <p style={{ fontSize: 13, color: '#f87171', marginBottom: 10 }}>Delete this outcome? This cannot be undone.</p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '7px 0', background: 'transparent', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 7, color: '#6b8fa8', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={handleDelete} disabled={deleting} style={{ flex: 2, padding: '7px 0', background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 7, color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{deleting ? 'Deleting…' : 'Yes, Delete'}</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDelete(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, color: '#6b8fa8', padding: '7px 12px', fontSize: 12, cursor: 'pointer' }}
+                  onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color='#ef4444'; b.style.borderColor='rgba(239,68,68,0.4)' }}
+                  onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color='#6b8fa8'; b.style.borderColor='rgba(239,68,68,0.2)' }}>
+                  <Trash2 size={13} /> Delete Outcome
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+        {/* Footer */}
+        {isPivot ? (
+          <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(239,68,68,0.2)', flexShrink: 0 }}>
+            <button onClick={onRedefine} style={{ width: '100%', padding: '10px 0', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              ↩ Redefine → SHAPE
+            </button>
+          </div>
+        ) : isMeasure ? (
+          <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(45,212,191,0.15)', display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button onClick={onRetreat} style={{ flex: 1, padding: '9px 0', background: 'rgba(107,143,168,0.1)', color: '#a8ccd8', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>← Retreat</button>
+            <button onClick={onAdvance} style={{ flex: 1, padding: '9px 0', background: 'rgba(45,212,191,0.15)', color: '#2dd4bf', border: '1px solid rgba(45,212,191,0.35)', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>✅ Deliver</button>
+            <button onClick={() => setShowPivotModal(true)} style={{ flex: 1, padding: '9px 0', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🔄 Pivot</button>
+          </div>
+        ) : (
+          <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(45,212,191,0.15)', display: 'flex', gap: 10, flexShrink: 0 }}>
+            <button onClick={onRetreat} disabled={stageIdx===0} style={{ flex: 1, padding: '9px 0', background: 'rgba(107,143,168,0.1)', color: stageIdx===0?'#3a5a6e':'#a8ccd8', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 8, cursor: stageIdx===0?'not-allowed':'pointer', fontSize: 13, fontWeight: 600 }}>← Retreat</button>
+            <button onClick={onAdvance} disabled={NEXT_STAGE[outcome.stage]===undefined} style={{ flex: 1, padding: '9px 0', background: NEXT_STAGE[outcome.stage]===undefined?'rgba(45,212,191,0.05)':'rgba(45,212,191,0.15)', color: NEXT_STAGE[outcome.stage]===undefined?'#3a5a6e':'#2dd4bf', border: `1px solid ${NEXT_STAGE[outcome.stage]===undefined?'rgba(45,212,191,0.1)':'rgba(45,212,191,0.35)'}`, borderRadius: 8, cursor: NEXT_STAGE[outcome.stage]===undefined?'not-allowed':'pointer', fontSize: 13, fontWeight: 600 }}>Advance →</button>
+          </div>
         )}
       </div>
-      <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(45,212,191,0.15)', display: 'flex', gap: 10, flexShrink: 0 }}>
-        <button onClick={onRetreat} disabled={stageIdx===0} style={{ flex: 1, padding: '9px 0', background: 'rgba(107,143,168,0.1)', color: stageIdx===0?'#3a5a6e':'#a8ccd8', border: '1px solid rgba(107,143,168,0.2)', borderRadius: 8, cursor: stageIdx===0?'not-allowed':'pointer', fontSize: 13, fontWeight: 600 }}>← Retreat</button>
-        <button onClick={onAdvance} disabled={stageIdx===STAGES.length-1} style={{ flex: 1, padding: '9px 0', background: stageIdx===STAGES.length-1?'rgba(45,212,191,0.05)':'rgba(45,212,191,0.15)', color: stageIdx===STAGES.length-1?'#3a5a6e':'#2dd4bf', border: `1px solid ${stageIdx===STAGES.length-1?'rgba(45,212,191,0.1)':'rgba(45,212,191,0.35)'}`, borderRadius: 8, cursor: stageIdx===STAGES.length-1?'not-allowed':'pointer', fontSize: 13, fontWeight: 600 }}>Advance →</button>
-      </div>
-    </div>
+      {showPivotModal && (
+        <PivotDecisionModal
+          onClose={() => setShowPivotModal(false)}
+          onConfirm={async (note) => { await onPivotDecision(note); setShowPivotModal(false) }}
+        />
+      )}
+    </>
   )
 }
 
@@ -323,6 +443,9 @@ function NewOutcomeModal({ defaultStage, projectId, workspaceId, onClose, onSave
 
   const inputStyle: React.CSSProperties = { width: '100%', background: '#0a1e2e', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 8, padding: '9px 12px', color: '#e8f4f8', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
   const labelStyle: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#6b8fa8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, display: 'block' }
+
+  // suppress unused var warning
+  void projectId
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,14,23,0.85)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -399,6 +522,26 @@ export default function ProjectBoardPage() {
     } catch { mutate(); addToast('Failed to move outcome', 'error') }
   }
 
+  const pivotDecision = async (outcome: OutcomeWithExtras, note: string) => {
+    mutate(displayOutcomes.map(o => o.id === outcome.id ? { ...o, stage: 'PIVOT' as Stage } : o), false)
+    try {
+      const res = await fetch(`/api/outcomes/${outcome.id}/stage`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stage: 'PIVOT', note: note || undefined }) })
+      if (!res.ok) throw new Error()
+      addToast(`"${outcome.title.slice(0, 30)}" → PIVOT 🔄`)
+      mutate()
+    } catch { mutate(); addToast('Failed to pivot outcome', 'error') }
+  }
+
+  const redefineFromPivot = async (outcome: OutcomeWithExtras) => {
+    mutate(displayOutcomes.map(o => o.id === outcome.id ? { ...o, stage: 'SHAPE' as Stage } : o), false)
+    try {
+      const res = await fetch(`/api/outcomes/${outcome.id}/stage`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stage: 'SHAPE', note: 'Redefined after pivot' }) })
+      if (!res.ok) throw new Error()
+      addToast(`"${outcome.title.slice(0, 30)}" ↩ Redefined → SHAPE`)
+      mutate()
+    } catch { mutate(); addToast('Failed to redefine outcome', 'error') }
+  }
+
   const addOutcome = async (title: string, stage: Stage, impactScore: number, isAiPair: boolean, signalStatus: SignalStatus, description?: string) => {
     const res = await fetch('/api/outcomes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, stage, impactScore, isAiPair, signalStatus, workspaceId, projectId, description }) })
     if (!res.ok) { addToast('Failed to create outcome', 'error'); throw new Error() }
@@ -420,7 +563,7 @@ export default function ProjectBoardPage() {
 
       {isLoading ? (
         <div style={{ flex: 1, display: 'flex', gap: 12, padding: 16, overflowX: 'auto', overflowY: 'hidden' }}>
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} style={{ minWidth: 220, flex: '0 0 240px', background: '#061420', borderRadius: 12, border: '1px solid rgba(45,212,191,0.08)', padding: '12px 10px' }}>
               <div style={{ height: 18, background: 'rgba(255,255,255,0.08)', borderRadius: 4, marginBottom: 12, animation: 'pulse 1.5s infinite' }} />
               {[1, 2].map(j => <div key={j} style={{ height: 76, background: 'rgba(255,255,255,0.04)', borderRadius: 8, marginBottom: 8, animation: 'pulse 1.5s infinite' }} />)}
@@ -433,27 +576,41 @@ export default function ProjectBoardPage() {
           {STAGES.map(stage => {
             const stageOutcomes = displayOutcomes.filter(o => o.stage === stage)
             const color = STAGE_COLORS[stage]
+            const isQA = stage === 'QA'
+            const isPivotCol = stage === 'PIVOT'
             return (
-              <div key={stage} style={{ minWidth: 220, maxWidth: 260, flex: '0 0 240px', display: 'flex', flexDirection: 'column', background: '#061420', borderRadius: 12, border: '1px solid rgba(45,212,191,0.08)', overflow: 'hidden' }}>
+              <div key={stage} style={{ minWidth: 220, maxWidth: 260, flex: '0 0 240px', display: 'flex', flexDirection: 'column', background: '#061420', borderRadius: 12, border: `1px solid ${isPivotCol ? 'rgba(239,68,68,0.12)' : 'rgba(45,212,191,0.08)'}`, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 14px 10px', borderBottom: `2px solid ${color}33`, background: `linear-gradient(180deg,${color}11 0%,transparent 100%)`, flexShrink: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{stage}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                      {isQA ? '🧪 ' : ''}{stage}
+                    </span>
                     <span style={{ fontSize: 11, fontWeight: 700, background: color + '22', color, borderRadius: 20, padding: '1px 7px', border: `1px solid ${color}44` }}>{stageOutcomes.length}</span>
                   </div>
+                  {isQA && <div style={{ fontSize: 10, color: '#06b6d4', opacity: 0.75, marginTop: 4 }}>Quality gate before shipping</div>}
+                  {isPivotCol && <div style={{ fontSize: 10, color: '#ef444488', marginTop: 4, lineHeight: 1.4 }}>Outcomes that didn&apos;t deliver. Redefine and send back to SHAPE.</div>}
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {stageOutcomes.map(o => (
-                    <OutcomeCard key={o.id} outcome={o} onClick={() => setSelectedId(o.id)} onAdvance={() => advanceStage(o)} />
+                    <OutcomeCard
+                      key={o.id}
+                      outcome={o}
+                      onClick={() => setSelectedId(o.id)}
+                      onAdvance={() => advanceStage(o)}
+                      onRedefine={isPivotCol ? () => redefineFromPivot(o) : undefined}
+                    />
                   ))}
-                  {stageOutcomes.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: '#2a4a5e', fontSize: 12, fontStyle: 'italic' }}>No outcomes yet</div>}
+                  {stageOutcomes.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: '#2a4a5e', fontSize: 12, fontStyle: 'italic' }}>{isPivotCol ? 'No pivots yet' : 'No outcomes yet'}</div>}
                 </div>
-                <div style={{ padding: 10, flexShrink: 0 }}>
-                  <button onClick={() => setAddingForStage(stage)} style={{ width: '100%', padding: '8px 0', background: 'transparent', color: color + 'aa', border: `1px dashed ${color}44`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                    onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background=color+'11'; b.style.borderColor=color+'88'; b.style.color=color }}
-                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background='transparent'; b.style.borderColor=color+'44'; b.style.color=color+'aa' }}>
-                    + Add
-                  </button>
-                </div>
+                {!isPivotCol && (
+                  <div style={{ padding: 10, flexShrink: 0 }}>
+                    <button onClick={() => setAddingForStage(stage)} style={{ width: '100%', padding: '8px 0', background: 'transparent', color: color + 'aa', border: `1px dashed ${color}44`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background=color+'11'; b.style.borderColor=color+'88'; b.style.color=color }}
+                      onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background='transparent'; b.style.borderColor=color+'44'; b.style.color=color+'aa' }}>
+                      + Add
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -468,6 +625,8 @@ export default function ProjectBoardPage() {
             onClose={() => setSelectedId(null)}
             onAdvance={() => advanceStage(selectedOutcome)}
             onRetreat={() => retreatStage(selectedOutcome)}
+            onPivotDecision={(note) => pivotDecision(selectedOutcome, note)}
+            onRedefine={() => { redefineFromPivot(selectedOutcome); setSelectedId(null) }}
             onUpdate={updated => {
               mutate(displayOutcomes.map(o => o.id === updated.id ? updated : o), false)
               addToast('Outcome updated')
