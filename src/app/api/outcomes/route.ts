@@ -11,6 +11,7 @@ const CreateOutcomeSchema = z.object({
   impactScore: z.number().int().min(1).max(5).default(3),
   isAiPair: z.boolean().default(false),
   targetMetric: z.string().max(500).optional(),
+  description: z.string().optional(),
   currentId: z.string().cuid().optional(),
 })
 

@@ -8,7 +8,7 @@ datasource db {
   directUrl = env("DATABASE_URL")
 }
 
-// ─── ORGANIZATION (White-label tenant) ────────────────────────────────────────
+// ─── ORGANIZATION ─────────────────────────────────────────────────────────────
 model Organization {
   id           String   @id @default(cuid())
   name         String
@@ -36,9 +36,53 @@ model Workspace {
   outcomes     Outcome[]
   focusWindows FocusWindow[]
   members      Member[]
+  projects     Project[]
 }
 
-// ─── MEMBER (User in workspace) ───────────────────────────────────────────────
+// ─── PROJECT (top-level grouping above Currents) ───────────────────────────────
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  color       String        @default("#2dd4bf")
+  status      ProjectStatus @default(ACTIVE)
+  workspaceId String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
+  currents       Current[]
+  outcomes       Outcome[]
+  projectMembers ProjectMember[]
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  COMPLETED
+}
+
+// ─── PROJECT MEMBER (project-level role override) ─────────────────────────────
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  memberId  String
+  role      ProjectRole @default(CONTRIBUTOR)
+  createdAt DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId])
+}
+
+enum ProjectRole {
+  OUTCOME_OWNER
+  CONTRIBUTOR
+  VIEWER
+}
+
+// ─── MEMBER ───────────────────────────────────────────────────────────────────
 model Member {
   id             String   @id @default(cuid())
   clerkUserId    String
@@ -50,10 +94,11 @@ model Member {
   workspaceId    String
   createdAt      DateTime @default(now())
 
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  workspace       Workspace    @relation(fields: [workspaceId], references: [id])
-  outcomes        Outcome[]    @relation("AssignedOutcomes")
-  createdOutcomes Outcome[]    @relation("CreatedOutcomes")
+  organization       Organization    @relation(fields: [organizationId], references: [id])
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id])
+  outcomes           Outcome[]       @relation("AssignedOutcomes")
+  createdOutcomes    Outcome[]       @relation("CreatedOutcomes")
+  projectMemberships ProjectMember[]
 
   @@unique([clerkUserId, workspaceId])
 }
@@ -72,25 +117,29 @@ model Current {
   name        String
   color       String   @default("#2dd4bf")
   workspaceId String
+  projectId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
+  project   Project?  @relation(fields: [projectId], references: [id])
   outcomes  Outcome[]
 }
 
-// ─── OUTCOME (Card / Ticket equivalent) ───────────────────────────────────────
+// ─── OUTCOME ──────────────────────────────────────────────────────────────────
 model Outcome {
   id              String      @id @default(cuid())
   title           String
+  description     String?  @db.Text
   targetMetric    String?
   currentMetric   String?
-  impactScore     Int         @default(3) // 1-5
+  impactScore     Int         @default(3)
   stage           Stage       @default(IDEATE)
   signalStatus    SignalStatus @default(NORMAL)
   isAiPair        Boolean     @default(false)
   pivotWindowDays Int         @default(7)
   pivotDeadline   DateTime?
+  projectId       String?
 
   workspaceId String
   currentId   String?
@@ -103,6 +152,7 @@ model Outcome {
   deliveredAt    DateTime?
 
   workspace     Workspace      @relation(fields: [workspaceId], references: [id])
+  project       Project?       @relation(fields: [projectId], references: [id])
   current       Current?       @relation(fields: [currentId], references: [id])
   assignee      Member?        @relation("AssignedOutcomes", fields: [assigneeId], references: [id])
   createdBy     Member         @relation("CreatedOutcomes", fields: [createdById], references: [id])
@@ -110,6 +160,7 @@ model Outcome {
   signals       Signal[]
   comments      Comment[]
   focusOutcomes FocusOutcome[]
+  codeLinks     CodeLink[]
 }
 
 enum Stage {
@@ -130,6 +181,26 @@ enum SignalStatus {
   DELIVERED
 }
 
+// ─── CODE LINK ────────────────────────────────────────────────────────────────
+model CodeLink {
+  id        String       @id @default(cuid())
+  outcomeId String
+  type      CodeLinkType
+  url       String
+  label     String?
+  createdAt DateTime     @default(now())
+
+  outcome Outcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+}
+
+enum CodeLinkType {
+  PR
+  BRANCH
+  COMMIT
+  REPO
+  SNIPPET
+}
+
 // ─── STAGE HISTORY ─────────────────────────────────────────────────────────────
 model StageHistory {
   id          String   @id @default(cuid())
@@ -143,7 +214,7 @@ model StageHistory {
   outcome Outcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
 }
 
-// ─── SIGNAL (Metric event) ─────────────────────────────────────────────────────
+// ─── SIGNAL ───────────────────────────────────────────────────────────────────
 model Signal {
   id        String     @id @default(cuid())
   outcomeId String
