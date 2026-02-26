@@ -1,0 +1,201 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ORGANIZATION (White-label tenant) ────────────────────────────────────────
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  logoUrl      String?
+  primaryColor String   @default("#2dd4bf")
+  domain       String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspaces Workspace[]
+  members    Member[]
+}
+
+// ─── WORKSPACE ────────────────────────────────────────────────────────────────
+model Workspace {
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  currents     Current[]
+  outcomes     Outcome[]
+  focusWindows FocusWindow[]
+  members      Member[]
+}
+
+// ─── MEMBER (User in workspace) ───────────────────────────────────────────────
+model Member {
+  id             String   @id @default(cuid())
+  clerkUserId    String
+  email          String
+  name           String
+  avatarUrl      String?
+  role           Role     @default(BUILDER)
+  organizationId String
+  workspaceId    String
+  createdAt      DateTime @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id])
+  outcomes        Outcome[]    @relation("AssignedOutcomes")
+  createdOutcomes Outcome[]    @relation("CreatedOutcomes")
+
+  @@unique([clerkUserId, workspaceId])
+}
+
+enum Role {
+  OUTCOME_OWNER
+  FLOQ_LEAD
+  BUILDER
+  SIGNAL_ANALYST
+  VIEWER
+}
+
+// ─── CURRENT (Stream / Epic equivalent) ───────────────────────────────────────
+model Current {
+  id          String   @id @default(cuid())
+  name        String
+  color       String   @default("#2dd4bf")
+  workspaceId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  outcomes  Outcome[]
+}
+
+// ─── OUTCOME (Card / Ticket equivalent) ───────────────────────────────────────
+model Outcome {
+  id              String      @id @default(cuid())
+  title           String
+  targetMetric    String?
+  currentMetric   String?
+  impactScore     Int         @default(3) // 1-5
+  stage           Stage       @default(IDEATE)
+  signalStatus    SignalStatus @default(NORMAL)
+  isAiPair        Boolean     @default(false)
+  pivotWindowDays Int         @default(7)
+  pivotDeadline   DateTime?
+
+  workspaceId String
+  currentId   String?
+  assigneeId  String?
+  createdById String
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  stageChangedAt DateTime @default(now())
+  deliveredAt    DateTime?
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id])
+  current       Current?       @relation(fields: [currentId], references: [id])
+  assignee      Member?        @relation("AssignedOutcomes", fields: [assigneeId], references: [id])
+  createdBy     Member         @relation("CreatedOutcomes", fields: [createdById], references: [id])
+  stageHistory  StageHistory[]
+  signals       Signal[]
+  comments      Comment[]
+  focusOutcomes FocusOutcome[]
+}
+
+enum Stage {
+  IDEATE
+  IDENTIFY
+  SHAPE
+  BUILD
+  SHIP
+  MEASURE
+  DELIVER
+  PIVOT
+}
+
+enum SignalStatus {
+  NORMAL
+  AT_RISK
+  EMERGENCY
+  DELIVERED
+}
+
+// ─── STAGE HISTORY ─────────────────────────────────────────────────────────────
+model StageHistory {
+  id          String   @id @default(cuid())
+  outcomeId   String
+  fromStage   Stage?
+  toStage     Stage
+  changedById String?
+  note        String?
+  createdAt   DateTime @default(now())
+
+  outcome Outcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+}
+
+// ─── SIGNAL (Metric event) ─────────────────────────────────────────────────────
+model Signal {
+  id        String     @id @default(cuid())
+  outcomeId String
+  type      SignalType
+  value     String?
+  note      String?
+  createdAt DateTime   @default(now())
+
+  outcome Outcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+}
+
+enum SignalType {
+  METRIC_UPDATE
+  BLOCKER_RAISED
+  BLOCKER_RESOLVED
+  PIVOT_TRIGGERED
+  AI_SUGGESTION
+  MANUAL_NOTE
+}
+
+// ─── COMMENT ──────────────────────────────────────────────────────────────────
+model Comment {
+  id        String   @id @default(cuid())
+  outcomeId String
+  authorId  String?
+  content   String
+  createdAt DateTime @default(now())
+
+  outcome Outcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+}
+
+// ─── FOCUS WINDOW ─────────────────────────────────────────────────────────────
+model FocusWindow {
+  id          String   @id @default(cuid())
+  name        String
+  workspaceId String
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id])
+  focusOutcomes FocusOutcome[]
+}
+
+model FocusOutcome {
+  id            String   @id @default(cuid())
+  focusWindowId String
+  outcomeId     String
+  createdAt     DateTime @default(now())
+
+  focusWindow FocusWindow @relation(fields: [focusWindowId], references: [id])
+  outcome     Outcome     @relation(fields: [outcomeId], references: [id])
+
+  @@unique([focusWindowId, outcomeId])
+}
